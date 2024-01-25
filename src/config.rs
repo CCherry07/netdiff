@@ -7,6 +7,8 @@ use serde_json::Value;
 use tokio::fs;
 use url::Url;
 
+use crate::ExtraArgs;
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct DiffConfig {
     #[serde(flatten)]
@@ -28,10 +30,6 @@ impl DiffConfig {
     }
 }
 
-pub struct DiffArgs {
-    
-}
-
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct DiffProfile {
     pub req1: RequestProfile,
@@ -40,12 +38,15 @@ pub struct DiffProfile {
 }
 
 impl DiffProfile {
-    pub async fn diff(&self , _args:DiffArgs)-> Result<String> {
+    pub async fn diff(&self , args:ExtraArgs)-> Result<String> {
+        println!("proflie:{:?}" ,self);
+        println!("args:{:?}" ,args);
+
         // let res1 = req1.send(args).await?;
         // let res2 = res2.send(args).await?;
         // let text1 = res1.filter_text(&self.res).await?;
         // let text2 = res2.filter_text(&self.res).await?;
-        todo!()
+        Ok("".to_string())
     }
 }
 
