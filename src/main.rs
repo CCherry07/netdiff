@@ -22,7 +22,6 @@ async fn run(args: RunArgs) -> Result<()> {
         .ok_or_else(|| anyhow::anyhow!("proflie {} is error:{}", args.profile, config_file))?;
 
     let extra_args = args.extra_params.into();
-    println!("Asdasd:{:?}", extra_args);
     profile.diff(extra_args).await?;
     Ok(())
 }
