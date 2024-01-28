@@ -1,10 +1,13 @@
 use anyhow::{Ok, Result};
 use http::{header::CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue, Method};
+use mime::Mime;
 use reqwest::{Client, Response};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::str::FromStr;
 use url::Url;
+
+use crate::ResponseProfile;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct RequestProfile {
@@ -38,18 +41,23 @@ fn default_params() -> Value {
     serde_json::json!({})
 }
 
+#[derive(Debug)]
+pub struct ResponseExt(Response);
+
 impl RequestProfile {
-    pub async fn send(&self, extra_args: &super::ExtraArgs) -> Result<Response> {
+    pub async fn send(&self, extra_args: &super::ExtraArgs) -> Result<ResponseExt> {
         let url = self.url.clone();
         let (headers, body, query) = self.gen_req_config(extra_args)?;
         let req_builder = Client::builder().build()?;
-        let _ = req_builder
+        let res = req_builder
             .request(self.method.clone(), url)
             .headers(headers)
             .query(&query)
-            .body(body);
+            .body(body)
+            .send()
+            .await?;
 
-        todo!()
+        Ok(ResponseExt(res))
     }
 
     pub fn gen_req_config(
@@ -77,10 +85,7 @@ impl RequestProfile {
             query[k] = v.parse()?;
         }
 
-        let content_type = headers
-            .get(http::header::CONTENT_TYPE)
-            .and_then(|v| v.to_str().ok())
-            .and_then(|s| s.parse::<mime::Mime>().ok());
+        let content_type = get_content_type(&headers);
 
         match content_type {
             Some(content) if content == mime::APPLICATION_JSON => {
@@ -94,7 +99,57 @@ impl RequestProfile {
                 let body = serde_qs::to_string(&body)?;
                 Ok((headers, body, query))
             }
-            _ => Err(anyhow::anyhow!("不是有效的 CONTENT_TYPE"))
+            _ => Err(anyhow::anyhow!("不是有效的 CONTENT_TYPE")),
         }
     }
+}
+
+impl ResponseExt {
+    pub async fn filter_text(self, profile: &ResponseProfile) -> Result<String> {
+        let mut output = String::new();
+        let res = self.0;
+        output.push_str(&format!("{:?} {:?} \n", res.version(), res.status()));
+        let headers = res.headers();
+        headers.iter().for_each(|(k, v)| {
+            if profile.skip_headers.contains(&k.to_string()) {
+                output.push_str(&format!("{}: {:?} \n", k, v));
+            }
+        });
+        let content_type = get_content_type(&headers);
+        let text = res.text().await?;
+        match content_type {
+            Some(content) if content == mime::APPLICATION_JSON => {
+                let body_text = filter_json(&text, &profile.skip_headers)?;
+                output.push_str(&body_text);
+            }
+            _ => {
+                return Err(anyhow::anyhow!(
+                    "没有匹配到的 CONTENT_TYPE:{:?}",
+                    content_type
+                ))
+            }
+        }
+        Ok(output)
+    }
+}
+
+pub fn filter_json(text: &str, skip: &[String]) -> Result<String> {
+    let mut json = serde_json::from_str(text)?;
+    match json {
+        serde_json::Value::Object(ref mut obj) => {
+            for k in skip {
+                obj.remove(k);
+            }
+        }
+        _ => {}
+    }
+
+    Ok(serde_json::to_string_pretty(&json)?)
+}
+
+pub fn get_content_type(headers: &HeaderMap) -> Option<Mime> {
+    headers
+        .get(http::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.parse::<mime::Mime>().ok())
 }

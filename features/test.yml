@@ -2,14 +2,14 @@
 todo:
   req1:
     method: GET
-    url: https://www.rust-lang.org/
+    url: http://localhost:8080
     headers:
         user-agent: Aloha
     params:
       hello: world
   req2:
     method: GET
-    url: https://www.rust-lang.org/
+    url:  http://localhost:8080
     params: {}
   res:
     skip_headers:

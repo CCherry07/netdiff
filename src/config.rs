@@ -4,7 +4,7 @@ use anyhow::{Ok, Result};
 use serde::{Deserialize, Serialize};
 use tokio::fs;
 
-use crate::{ExtraArgs, RequestProfile};
+use crate::{diff_text_to_terminal_inline, ExtraArgs, RequestProfile};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct DiffConfig {
@@ -35,15 +35,12 @@ pub struct DiffProfile {
 }
 
 impl DiffProfile {
-    pub async fn diff(&self , args:ExtraArgs)-> Result<String> {
-        println!("proflie:{:?}" ,self);
-        println!("args:{:?}" ,args);
-
-        // let res1 = req1.send(args).await?;
-        // let res2 = res2.send(args).await?;
-        // let text1 = res1.filter_text(&self.res).await?;
-        // let text2 = res2.filter_text(&self.res).await?;
-        Ok("".to_string())
+    pub async fn diff(&self, args: ExtraArgs) -> Result<String> {
+        let res1 = self.req1.send(&args).await?;
+        let res2 = self.req2.send(&args).await?;
+        let text1 = res1.filter_text(&self.res).await?;
+        let text2 = res2.filter_text(&self.res).await?;
+        Ok(diff_text_to_terminal_inline(&text1, &text2)?)
     }
 }
 
@@ -54,5 +51,3 @@ pub struct ResponseProfile {
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub skip_body: Vec<String>,
 }
-
-

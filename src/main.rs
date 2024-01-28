@@ -3,6 +3,8 @@ use anyhow::Result;
 use clap::Parser;
 use netdiff::cli::{Action, Args, RunArgs};
 use netdiff::DiffConfig;
+use std::io::stdout;
+use std::io::Write;
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     let args = Args::parse();
@@ -22,6 +24,8 @@ async fn run(args: RunArgs) -> Result<()> {
         .ok_or_else(|| anyhow::anyhow!("proflie {} is error:{}", args.profile, config_file))?;
 
     let extra_args = args.extra_params.into();
-    profile.diff(extra_args).await?;
+    let diff_str = profile.diff(extra_args).await?;
+    let mut stdout = stdout().lock();
+    write!(stdout, "{}", diff_str)?;
     Ok(())
 }
