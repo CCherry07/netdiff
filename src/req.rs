@@ -4,7 +4,7 @@ use mime::Mime;
 use reqwest::{Client, Response};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::str::FromStr;
+use std::{process::Output, str::FromStr};
 use url::Url;
 
 use crate::ResponseProfile;
@@ -106,31 +106,50 @@ impl RequestProfile {
 
 impl ResponseExt {
     pub async fn filter_text(self, profile: &ResponseProfile) -> Result<String> {
-        let mut output = String::new();
         let res = self.0;
-        output.push_str(&format!("{:?} {:?} \n", res.version(), res.status()));
-        let headers = res.headers();
-        headers.iter().for_each(|(k, v)| {
-            if profile.skip_headers.contains(&k.to_string()) {
-                output.push_str(&format!("{}: {:?} \n", k, v));
-            }
-        });
-        let content_type = get_content_type(&headers);
-        let text = res.text().await?;
-        match content_type {
-            Some(content) if content == mime::APPLICATION_JSON => {
-                let body_text = filter_json(&text, &profile.skip_headers)?;
-                output.push_str(&body_text);
-            }
-            _ => {
-                return Err(anyhow::anyhow!(
-                    "没有匹配到的 CONTENT_TYPE:{:?}",
-                    content_type
-                ))
-            }
-        }
+        let output = String::new();
+        let output = append_header_str(output, &res, &profile.skip_headers)?;
+        let output = append_body_str(output, res, &profile.skip_headers).await?;
         Ok(output)
     }
+}
+
+pub fn append_header_str(
+    mut output: String,
+    res: &Response,
+    skip_headers: &[String],
+) -> Result<String> {
+    output.push_str(&format!("{:?} {:?} \n", res.version(), res.status()));
+    let headers = res.headers();
+    headers.iter().for_each(|(k, v)| {
+        if skip_headers.contains(&k.to_string()) {
+            output.push_str(&format!("{}: {:?} \n", k, v));
+        }
+    });
+    return Ok(output);
+}
+
+pub async fn append_body_str(
+    mut output: String,
+    res: Response,
+    skip_headers: &[String],
+) -> Result<String> {
+    let headers = res.headers();
+    let content_type = get_content_type(&headers);
+    let text = res.text().await?;
+    match content_type {
+        Some(content) if content == mime::APPLICATION_JSON => {
+            let body_text = filter_json(&text, &skip_headers)?;
+            output.push_str(&body_text);
+        }
+        _ => {
+            return Err(anyhow::anyhow!(
+                "没有匹配到的 CONTENT_TYPE:{:?}",
+                content_type
+            ))
+        }
+    }
+    return Ok(output);
 }
 
 pub fn filter_json(text: &str, skip: &[String]) -> Result<String> {
