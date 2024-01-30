@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use super::is_default;
-use anyhow::{Ok, Result};
+use anyhow::{Context, Ok, Result};
 use serde::{Deserialize, Serialize};
 use tokio::fs;
 
@@ -26,8 +26,8 @@ impl DiffConfig {
     }
 
     pub(crate) fn validate(&self) -> Result<()> {
-        for (_, propfile) in &self.profiles {
-            propfile.validate()?;
+        for (name, propfile) in &self.profiles {
+            propfile.validate().context(format!("profile : {}", name))?;
         }
         Ok(())
     }
@@ -54,9 +54,9 @@ impl DiffProfile {
         diff_text_to_terminal_inline(&text1, &text2)
     }
 
-    pub(crate) fn validate(&self)->Result<()> {
-        self.req1.validate()?;
-        self.req2.validate()?;
+    pub(crate) fn validate(&self) -> Result<()> {
+        self.req1.validate().context("req1 config is failed")?;
+        self.req2.validate().context("req2 config is failed")?;
         Ok(())
     }
 }
