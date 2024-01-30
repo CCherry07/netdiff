@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use super::is_default;
 use anyhow::{Ok, Result};
 use serde::{Deserialize, Serialize};
 use tokio::fs;
@@ -19,7 +20,16 @@ impl DiffConfig {
     }
 
     pub fn from_yml(content: &str) -> Result<Self> {
-        Ok(serde_yaml::from_str(content)?)
+        let config: Self = serde_yaml::from_str(content)?;
+        config.validate()?;
+        Ok(config)
+    }
+
+    pub(crate) fn validate(&self) -> Result<()> {
+        for (_, propfile) in &self.profiles {
+            propfile.validate()?;
+        }
+        Ok(())
     }
 
     pub fn get_profile(&self, name: &str) -> Option<&DiffProfile> {
@@ -31,6 +41,7 @@ impl DiffConfig {
 pub struct DiffProfile {
     pub req1: RequestProfile,
     pub req2: RequestProfile,
+    #[serde(skip_serializing_if = "is_default", default)]
     pub res: ResponseProfile,
 }
 
@@ -40,11 +51,17 @@ impl DiffProfile {
         let res2 = self.req2.send(&args).await?;
         let text1 = res1.filter_text(&self.res).await?;
         let text2 = res2.filter_text(&self.res).await?;
-        Ok(diff_text_to_terminal_inline(&text1, &text2)?)
+        diff_text_to_terminal_inline(&text1, &text2)
+    }
+
+    pub(crate) fn validate(&self)->Result<()> {
+        self.req1.validate()?;
+        self.req2.validate()?;
+        Ok(())
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
 pub struct ResponseProfile {
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub skip_headers: Vec<String>,

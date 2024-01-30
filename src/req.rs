@@ -4,7 +4,7 @@ use mime::Mime;
 use reqwest::{Client, Response};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::{process::Output, str::FromStr};
+use std::str::FromStr;
 use url::Url;
 
 use crate::ResponseProfile;
@@ -29,15 +29,15 @@ pub struct RequestProfile {
     pub user_agent: Option<String>,
 }
 
-fn is_default<T: Default + PartialEq>(t: &T) -> bool {
+pub fn is_default<T: Default + PartialEq>(t: &T) -> bool {
     t == &T::default()
 }
 
-fn is_empty_value(v: &Value) -> bool {
+pub fn is_empty_value(v: &Value) -> bool {
     v.is_null() || (v.is_object() && v.as_object().unwrap().is_empty())
 }
 
-fn default_params() -> Value {
+pub fn default_params() -> Value {
     serde_json::json!({})
 }
 
@@ -58,6 +58,24 @@ impl RequestProfile {
             .await?;
 
         Ok(ResponseExt(res))
+    }
+
+    pub(crate) fn validate(&self) -> Result<()> {
+        if !self.params.is_object() {
+            return Err(anyhow::anyhow!(
+                "parmas: {} 不是一个对象",
+                serde_yaml::to_string(&self.params)?
+            ));
+        }
+        if let Some(body) = self.body.as_ref() {
+            if !body.is_object() {
+                return Err(anyhow::anyhow!(
+                    "body:{} 不是一个对象",
+                    serde_yaml::to_string(body)?
+                ));
+            }
+        }
+        Ok(())
     }
 
     pub fn gen_req_config(
@@ -154,21 +172,17 @@ pub async fn append_body_str(
 
 pub fn filter_json(text: &str, skip: &[String]) -> Result<String> {
     let mut json = serde_json::from_str(text)?;
-    match json {
-        serde_json::Value::Object(ref mut obj) => {
-            for k in skip {
-                obj.remove(k);
-            }
+    if let serde_json::Value::Object(ref mut obj) = json {
+        for k in skip {
+            obj.remove(k);
         }
-        _ => {}
     }
-
     Ok(serde_json::to_string_pretty(&json)?)
 }
 
 pub fn get_content_type(headers: &HeaderMap) -> Option<Mime> {
     headers
         .get(http::header::CONTENT_TYPE)
-        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.to_str().unwrap().split(";").next())
         .and_then(|s| s.parse::<mime::Mime>().ok())
 }
