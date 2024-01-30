@@ -159,15 +159,10 @@ pub async fn append_body_str(
         Some(content) if content == mime::APPLICATION_JSON => {
             let body_text = filter_json(&text, &skip_headers)?;
             output.push_str(&body_text);
+            Ok(output)
         }
-        _ => {
-            return Err(anyhow::anyhow!(
-                "没有匹配到的 CONTENT_TYPE:{:?}",
-                content_type
-            ))
-        }
+        _ => Ok(text),
     }
-    return Ok(output);
 }
 
 pub fn filter_json(text: &str, skip: &[String]) -> Result<String> {
