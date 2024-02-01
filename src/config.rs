@@ -14,6 +14,9 @@ pub struct DiffConfig {
 }
 
 impl DiffConfig {
+    pub fn new(profiles: HashMap<String, DiffProfile>) -> Self {
+        Self { profiles }
+    }
     pub async fn load_yml(path: &str) -> Result<Self> {
         let content = fs::read_to_string(path).await?;
         Self::from_yml(&content)
@@ -46,6 +49,9 @@ pub struct DiffProfile {
 }
 
 impl DiffProfile {
+    pub fn new(req1: RequestProfile, req2: RequestProfile, res: ResponseProfile) -> Self {
+        Self { req1, req2, res }
+    }
     pub async fn diff(&self, args: ExtraArgs) -> Result<String> {
         let res1 = self.req1.send(&args).await?;
         let res2 = self.req2.send(&args).await?;
@@ -67,4 +73,13 @@ pub struct ResponseProfile {
     pub skip_headers: Vec<String>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub skip_body: Vec<String>,
+}
+
+impl ResponseProfile {
+    pub fn new(skip_headers: Vec<String>, skip_body: Vec<String>) -> Self {
+        Self {
+            skip_headers,
+            skip_body,
+        }
+    }
 }

@@ -45,6 +45,23 @@ pub fn default_params() -> Value {
 pub struct ResponseExt(Response);
 
 impl RequestProfile {
+    pub fn new(
+        method: Method,
+        url: Url,
+        params: Value,
+        headers: HeaderMap,
+        body: Option<Value>,
+        user_agent: Option<String>,
+    ) -> Self {
+        Self {
+            method,
+            url,
+            params,
+            headers,
+            body,
+            user_agent,
+        }
+    }
     pub async fn send(&self, extra_args: &super::ExtraArgs) -> Result<ResponseExt> {
         let url = self.url.clone();
         let (headers, body, query) = self.gen_req_config(extra_args)?;
@@ -122,6 +139,27 @@ impl RequestProfile {
     }
 }
 
+impl FromStr for RequestProfile {
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> Result<Self> {
+        let mut url = Url::parse(s)?;
+        let qs = Url::query_pairs(&url);
+        let mut parmas = json!({});
+        for (k, v) in qs {
+            parmas[&*k] = v.parse()?;
+        }
+        url.set_query(None);
+        let profile = Self {
+            method: Method::GET,
+            url,
+            params: parmas,
+            headers: HeaderMap::new(),
+            body: None,
+            user_agent: None,
+        };
+        Ok(profile)
+    }
+}
 impl ResponseExt {
     pub async fn filter_text(self, profile: &ResponseProfile) -> Result<String> {
         let res = self.0;
@@ -129,6 +167,14 @@ impl ResponseExt {
         let output = append_header_str(output, &res, &profile.skip_headers)?;
         let output = append_body_str(output, res, &profile.skip_headers).await?;
         Ok(output)
+    }
+    pub fn get_header_keys(self) -> Vec<String> {
+        let res = self.0;
+        let headers = res.headers();
+        headers
+            .iter()
+            .map(|(k, _)| k.to_string())
+            .collect::<Vec<String>>()
     }
 }
 
