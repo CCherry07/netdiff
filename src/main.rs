@@ -5,6 +5,7 @@ use dialoguer::theme::ColorfulTheme;
 use dialoguer::Input;
 use dialoguer::MultiSelect;
 use netdiff::cli::{Action, Args, RunArgs};
+use netdiff::highlight_text;
 use netdiff::DiffConfig;
 use netdiff::DiffProfile;
 use netdiff::ExtraArgs;
@@ -49,7 +50,7 @@ async fn parse() -> Result<()> {
     let result = serde_yaml::to_string(&config)?;
 
     let mut stdout = stdout().lock();
-    write!(stdout, "========Parse Yaml========\n{}", result)?;
+    write!(stdout, "======== Parse Yaml ========\n{}", highlight_text(&result, "yaml")?)?;
     Ok(())
 }
 
