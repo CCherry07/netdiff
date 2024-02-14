@@ -1,3 +1,6 @@
+mod netdiff;
+mod netreq;
+
 use anyhow::{Ok, Result};
 use http::{header::CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue, Method};
 use mime::Mime;
@@ -7,7 +10,8 @@ use serde_json::{json, Value};
 use std::str::FromStr;
 use url::Url;
 
-use crate::ResponseProfile;
+pub use netdiff::{DiffConfig, DiffProfile, ResponseProfile};
+pub use netreq::RequestConfig;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct RequestProfile {
