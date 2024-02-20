@@ -2,9 +2,9 @@ mod config;
 mod utils;
 
 pub mod cli;
-pub use config::{DiffConfig, DiffProfile, ResponseProfile};
-pub use config::is_default;
-pub use config::RequestProfile;
+pub use config::{
+    is_default, DiffConfig, DiffProfile, LoadConfig, RequestProfile, ResponseProfile,
+};
 pub use utils::diff_text_to_terminal_inline;
 pub use utils::highlight_text;
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

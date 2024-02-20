@@ -9,6 +9,7 @@ use netdiff::highlight_text;
 use netdiff::DiffConfig;
 use netdiff::DiffProfile;
 use netdiff::ExtraArgs;
+use netdiff::LoadConfig;
 use netdiff::RequestProfile;
 use netdiff::ResponseProfile;
 use std::io::stdout;
@@ -56,7 +57,7 @@ async fn parse() -> Result<()> {
 
 async fn run(args: RunArgs) -> Result<()> {
     let config_file = args.config.unwrap_or_else(|| "./default.yml".to_string());
-    let config = DiffConfig::load_yml(&config_file).await?;
+    let config = DiffConfig::load_yaml(&config_file).await?;
 
     let profile = config
         .get_profile(&args.profile)

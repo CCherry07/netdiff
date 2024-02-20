@@ -2,16 +2,39 @@ mod netdiff;
 mod netreq;
 
 use anyhow::{Ok, Result};
+use async_trait::async_trait;
 use http::{header::CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue, Method};
 use mime::Mime;
 use reqwest::{Client, Response};
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::str::FromStr;
+use tokio::fs;
 use url::Url;
 
 pub use netdiff::{DiffConfig, DiffProfile, ResponseProfile};
-pub use netreq::RequestConfig;
+
+#[async_trait]
+pub trait LoadConfig
+where
+    Self: Sized + ValidateConfig + DeserializeOwned,
+{
+    /// load config from yaml file
+    async fn load_yaml(path: &str) -> Result<Self> {
+        let content = fs::read_to_string(path).await?;
+        Self::from_yaml(&content)
+    }
+    /// load config from yaml string
+    fn from_yaml(content: &str) -> Result<Self> {
+        let config: Self = serde_yaml::from_str(content)?;
+        config.validate()?;
+        Ok(config)
+    }
+}
+
+pub trait ValidateConfig {
+    fn validate(&self) -> Result<()>;
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct RequestProfile {
@@ -194,7 +217,7 @@ pub fn append_header_str(
             output.push_str(&format!("{}: {:?} \n", k, v));
         }
     });
-    return Ok(output);
+    Ok(output)
 }
 
 pub async fn append_body_str(

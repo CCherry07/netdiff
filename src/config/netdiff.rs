@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 
-use super::is_default;
+use super::{is_default, LoadConfig, ValidateConfig};
 use anyhow::{Context, Ok, Result};
 use serde::{Deserialize, Serialize};
-use tokio::fs;
 
 use crate::{diff_text_to_terminal_inline, ExtraArgs, RequestProfile};
 
@@ -13,28 +12,21 @@ pub struct DiffConfig {
     pub profiles: HashMap<String, DiffProfile>,
 }
 
-impl DiffConfig {
-    pub fn new(profiles: HashMap<String, DiffProfile>) -> Self {
-        Self { profiles }
-    }
-    pub async fn load_yml(path: &str) -> Result<Self> {
-        let content = fs::read_to_string(path).await?;
-        Self::from_yml(&content)
-    }
-
-    pub fn from_yml(content: &str) -> Result<Self> {
-        let config: Self = serde_yaml::from_str(content)?;
-        config.validate()?;
-        Ok(config)
-    }
-
-    pub(crate) fn validate(&self) -> Result<()> {
+impl LoadConfig for DiffConfig {}
+impl ValidateConfig for DiffConfig {
+    fn validate(&self) -> Result<()> {
         for (name, propfile) in &self.profiles {
             propfile.validate().context(format!("profile : {}", name))?;
         }
         Ok(())
     }
+}
 
+impl DiffConfig {
+    pub fn new(profiles: HashMap<String, DiffProfile>) -> Self {
+        Self { profiles }
+    }
+    
     pub fn get_profile(&self, name: &str) -> Option<&DiffProfile> {
         self.profiles.get(name)
     }
