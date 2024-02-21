@@ -1,5 +1,5 @@
-mod netdiff;
-mod netreq;
+mod diff;
+mod req;
 
 use anyhow::{Ok, Result};
 use async_trait::async_trait;
@@ -11,8 +11,10 @@ use serde_json::{json, Value};
 use std::str::FromStr;
 use tokio::fs;
 use url::Url;
+use std::fmt::Write;
 
-pub use netdiff::{DiffConfig, DiffProfile, ResponseProfile};
+pub use diff::{DiffConfig, DiffProfile, ResponseProfile};
+pub use req::RequestConfig;
 
 #[async_trait]
 pub trait LoadConfig
@@ -188,11 +190,25 @@ impl FromStr for RequestProfile {
     }
 }
 impl ResponseExt {
+    pub fn into_inner(self) -> Response {
+        self.0
+    }
     pub async fn filter_text(self, profile: &ResponseProfile) -> Result<String> {
-        let res = self.0;
-        let output = String::new();
-        let output = append_header_str(output, &res, &profile.skip_headers)?;
-        let output = append_body_str(output, res, &profile.skip_headers).await?;
+        let res = self.into_inner();
+        let mut output = get_status_text(&res)?;
+
+        write!(
+            &mut output,
+            "{}",
+            get_header_text(&res, &profile.skip_headers)?
+        )?;
+
+        write!(
+            &mut output,
+            "{}",
+            get_body_text(res, &profile.skip_body).await?
+        )?;
+
         Ok(output)
     }
     pub fn get_header_keys(self) -> Vec<String> {
@@ -205,12 +221,15 @@ impl ResponseExt {
     }
 }
 
-pub fn append_header_str(
-    mut output: String,
+pub fn get_status_text(res: &Response) -> Result<String> {
+    Ok(format!("{:?} {:?} \n", res.version(), res.status()))
+}
+
+pub fn get_header_text(
     res: &Response,
     skip_headers: &[String],
 ) -> Result<String> {
-    output.push_str(&format!("{:?} {:?} \n", res.version(), res.status()));
+    let mut output = String::new();
     let headers = res.headers();
     headers.iter().for_each(|(k, v)| {
         if skip_headers.contains(&k.to_string()) {
@@ -220,8 +239,7 @@ pub fn append_header_str(
     Ok(output)
 }
 
-pub async fn append_body_str(
-    mut output: String,
+pub async fn get_body_text(
     res: Response,
     skip_headers: &[String],
 ) -> Result<String> {
@@ -231,8 +249,7 @@ pub async fn append_body_str(
     match content_type {
         Some(content) if content == mime::APPLICATION_JSON => {
             let body_text = filter_json(&text, &skip_headers)?;
-            output.push_str(&body_text);
-            Ok(output)
+            Ok(body_text)
         }
         _ => Ok(text),
     }
