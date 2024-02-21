@@ -13,7 +13,8 @@ use netdiff::{
 };
 
 use std::io::stdout;
-use std::io::Write;
+use std::io::Write as _;
+use std::fmt::Write as _;
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
@@ -75,6 +76,12 @@ async fn run(args: RunArgs) -> Result<()> {
     let body = get_body_text(res, &[]).await?;
 
     let mut output = String::new();
-    
+    write!(&mut output, "{}", status)?;
+    write!(&mut output, "{}", highlight_text(&headers, "yaml")?)?;
+    write!(&mut output, "{}", highlight_text(&body, "json")?)?;
+
+    let stdout = std::io::stdout();
+    let mut stdout = stdout.lock();
+    write!(stdout,"{}", &output)?;
     Ok(())
 }
