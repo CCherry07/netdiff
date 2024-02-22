@@ -49,7 +49,7 @@ async fn parse() -> Result<()> {
     write!(
         stdout,
         "======== Parse Yaml ========\n{}",
-        highlight_text(&result, "yaml")?
+        highlight_text(&result, "yaml", None)?
     )?;
     Ok(())
 }

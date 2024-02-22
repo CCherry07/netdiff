@@ -1,9 +1,9 @@
 use anyhow::{Ok, Result};
-use netdiff::DiffConfig;
+use netdiff::{DiffConfig, LoadConfig};
 
 fn main() -> Result<()> {
     let content = include_str!("../features/test.yml");
-    let config = DiffConfig::from_yml(content)?;
+    let config = DiffConfig::from_yaml(content)?;
     println!("{:?}", config);
     Ok(())
 }

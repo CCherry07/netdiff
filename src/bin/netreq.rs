@@ -12,9 +12,9 @@ use netdiff::{
     RequestConfig, RequestProfile, ResponseProfile,
 };
 
+use std::fmt::Write as _;
 use std::io::stdout;
 use std::io::Write as _;
-use std::fmt::Write as _;
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
@@ -29,34 +29,23 @@ async fn main() -> Result<(), anyhow::Error> {
 
 async fn parse() -> Result<()> {
     let theme = ColorfulTheme::default();
-    let url1: String = Input::with_theme(&theme)
-        .with_prompt("url1?")
+    let url: String = Input::with_theme(&theme)
+        .with_prompt("url?")
         .interact_text()?;
-    let url2: String = Input::with_theme(&theme)
-        .with_prompt("url2?")
-        .interact_text()?;
-    let req1: RequestProfile = url1.parse()?;
-    let header_keys = req1.send(&ExtraArgs::default()).await?.get_header_keys();
+    let profile: RequestProfile = url.parse()?;
+
     let name = Input::with_theme(&theme)
         .with_prompt("profile name?")
         .interact_text()?;
-    let chosen = MultiSelect::with_theme(&theme)
-        .with_prompt("select skip headers")
-        .items(&header_keys)
-        .interact()?;
-    let skip_headers: Vec<String> = chosen.iter().map(|i| header_keys[*i].to_string()).collect();
 
-    let req2: RequestProfile = url2.parse()?;
-    let res = ResponseProfile::new(skip_headers, vec![]);
-    let profile = DiffProfile::new(req1, req2, res);
-    let config = DiffConfig::new(vec![(name, profile)].into_iter().collect());
+    let config = RequestConfig::new(vec![(name, profile)].into_iter().collect());
     let result = serde_yaml::to_string(&config)?;
 
     let mut stdout = stdout().lock();
     write!(
         stdout,
         "======== Parse Yaml ========\n{}",
-        highlight_text(&result, "yaml")?
+        highlight_text(&result, "yaml", None)?
     )?;
     Ok(())
 }
@@ -77,11 +66,15 @@ async fn run(args: RunArgs) -> Result<()> {
 
     let mut output = String::new();
     write!(&mut output, "{}", status)?;
-    write!(&mut output, "{}", highlight_text(&headers, "yaml")?)?;
-    write!(&mut output, "{}", highlight_text(&body, "json")?)?;
+    write!(
+        &mut output,
+        "{}",
+        highlight_text(&headers, "yaml", Some("InspiredGitHub"))?
+    )?;
+    write!(&mut output, "{}", highlight_text(&body, "json", None)?)?;
 
     let stdout = std::io::stdout();
     let mut stdout = stdout.lock();
-    write!(stdout,"{}", &output)?;
+    write!(stdout, "{}", &output)?;
     Ok(())
 }
