@@ -3,14 +3,10 @@ use anyhow::Result;
 use clap::Parser;
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::Input;
-use dialoguer::MultiSelect;
 use netdiff::cli::{Action, Args, RunArgs};
 use netdiff::highlight_text;
 use netdiff::LoadConfig;
-use netdiff::{
-    get_body_text, get_header_text, get_status_text, DiffConfig, DiffProfile, ExtraArgs,
-    RequestConfig, RequestProfile, ResponseProfile,
-};
+use netdiff::{get_body_text, get_header_text, get_status_text, RequestConfig, RequestProfile};
 
 use std::fmt::Write as _;
 use std::io::stdout;
@@ -63,8 +59,10 @@ async fn run(args: RunArgs) -> Result<()> {
     let status = get_status_text(&res)?;
     let headers = get_header_text(&res, &[])?;
     let body = get_body_text(res, &[]).await?;
+    let url = profile.get_url(&extra_args)?;
 
     let mut output = String::new();
+    write!(&mut output, "send url: {}\n", &url)?;
     write!(&mut output, "{}", status)?;
     write!(
         &mut output,

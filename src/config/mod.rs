@@ -8,10 +8,10 @@ use mime::Mime;
 use reqwest::{Client, Response};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::fmt::Write;
 use std::str::FromStr;
 use tokio::fs;
 use url::Url;
-use std::fmt::Write;
 
 pub use diff::{DiffConfig, DiffProfile, ResponseProfile};
 pub use req::RequestConfig;
@@ -124,6 +124,14 @@ impl RequestProfile {
         Ok(())
     }
 
+    pub fn get_url(&self, extra_args: &super::ExtraArgs) -> Result<String> {
+        let mut url = self.url.clone();
+        for (k, v) in &extra_args.query {
+            url.query_pairs_mut().append_pair(k, v.to_string().as_str());
+        }
+        Ok(url.to_string())
+    }
+
     pub fn gen_req_config(
         &self,
         extra_args: &super::ExtraArgs,
@@ -225,10 +233,7 @@ pub fn get_status_text(res: &Response) -> Result<String> {
     Ok(format!("{:?} {:?} \n", res.version(), res.status()))
 }
 
-pub fn get_header_text(
-    res: &Response,
-    skip_headers: &[String],
-) -> Result<String> {
+pub fn get_header_text(res: &Response, skip_headers: &[String]) -> Result<String> {
     let mut output = String::new();
     let headers = res.headers();
     headers.iter().for_each(|(k, v)| {
@@ -239,10 +244,7 @@ pub fn get_header_text(
     Ok(output)
 }
 
-pub async fn get_body_text(
-    res: Response,
-    skip_headers: &[String],
-) -> Result<String> {
+pub async fn get_body_text(res: Response, skip_headers: &[String]) -> Result<String> {
     let headers = res.headers();
     let content_type = get_content_type(&headers);
     let text = res.text().await?;
