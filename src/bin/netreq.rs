@@ -1,5 +1,6 @@
 use anyhow::Ok;
 use anyhow::Result;
+use atty::Stream;
 use clap::Parser;
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::Input;
@@ -7,7 +8,6 @@ use netdiff::cli::{Action, Args, RunArgs};
 use netdiff::highlight_text;
 use netdiff::LoadConfig;
 use netdiff::{get_body_text, get_header_text, get_status_text, RequestConfig, RequestProfile};
-
 use std::fmt::Write as _;
 use std::io::stdout;
 use std::io::Write as _;
@@ -38,11 +38,17 @@ async fn parse() -> Result<()> {
     let result = serde_yaml::to_string(&config)?;
 
     let mut stdout = stdout().lock();
-    write!(
-        stdout,
-        "======== Parse Yaml ========\n{}",
-        highlight_text(&result, "yaml", None)?
-    )?;
+
+    if atty::is(Stream::Stdout) {
+        write!(
+            stdout,
+            "======== Parse Yaml ========\n{}",
+            highlight_text(&result, "yaml", None)?
+        )?;
+    } else {
+        write!(stdout, "{}", &result)?;
+    }
+
     Ok(())
 }
 
@@ -64,12 +70,17 @@ async fn run(args: RunArgs) -> Result<()> {
     let mut output = String::new();
     write!(&mut output, "send url: {}\n", &url)?;
     write!(&mut output, "{}", status)?;
-    write!(
-        &mut output,
-        "{}",
-        highlight_text(&headers, "yaml", Some("InspiredGitHub"))?
-    )?;
-    write!(&mut output, "{}", highlight_text(&body, "json", None)?)?;
+
+    if atty::is(Stream::Stdout) {
+        write!(
+            &mut output,
+            "{}",
+            highlight_text(&headers, "yaml", Some("InspiredGitHub"))?
+        )?;
+        write!(&mut output, "{}", highlight_text(&body, "json", None)?)?;
+    } else {
+        write!(&mut output, "{}", &body)?;
+    }
 
     let stdout = std::io::stdout();
     let mut stdout = stdout.lock();
