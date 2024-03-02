@@ -1,5 +1,6 @@
 use anyhow::Ok;
 use anyhow::Result;
+use atty::Stream;
 use clap::Parser;
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::Input;
@@ -46,11 +47,17 @@ async fn parse() -> Result<()> {
     let result = serde_yaml::to_string(&config)?;
 
     let mut stdout = stdout().lock();
-    write!(
-        stdout,
-        "======== Parse Yaml ========\n{}",
-        highlight_text(&result, "yaml", None)?
-    )?;
+
+    if atty::is(Stream::Stdout) {
+        write!(
+            stdout,
+            "======== Parse Yaml ========\n{}",
+            highlight_text(&result, "yaml", None)?
+        )?;
+    } else {
+        write!(stdout, "{}", &result)?;
+    }
+
     Ok(())
 }
 
