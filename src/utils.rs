@@ -1,8 +1,11 @@
 use anyhow::{Ok, Result};
+use atty::Stream;
 use console::{style, Style};
 use similar::{ChangeTag, TextDiff};
 use std::fmt;
-use std::fmt::Write;
+use std::fmt::Write as _;
+use std::io::stderr;
+use std::io::Write as _;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::ThemeSet;
 use syntect::parsing::SyntaxSet;
@@ -78,4 +81,22 @@ pub fn highlight_text(text: &str, extensions: &str, theme: Option<&str>) -> Resu
         write!(&mut output, "{}", escaped)?;
     }
     Ok(output)
+}
+
+pub fn handle_run_err(result: Result<()>) -> Result<()> {
+    match result {
+        Err(e) => {
+            let stderr = stderr();
+            let mut stderr = stderr.lock();
+            if atty::is(Stream::Stderr) {
+                let s = Style::new().red();
+                write!(stderr, "{:?}", s.apply_to(format!("{:?}", e)))?;
+            } else {
+                write!(stderr, "{:?}", e)?;
+            }
+        }
+        _ => {}
+    }
+
+    Ok(())
 }

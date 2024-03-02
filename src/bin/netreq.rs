@@ -4,10 +4,11 @@ use atty::Stream;
 use clap::Parser;
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::Input;
+
 use netdiff::cli::{Action, Args, RunArgs};
-use netdiff::highlight_text;
-use netdiff::LoadConfig;
-use netdiff::{get_body_text, get_header_text, get_status_text, RequestConfig, RequestProfile};
+use netdiff::{get_body_text, get_header_text, get_status_text, handle_run_err, highlight_text};
+use netdiff::{LoadConfig, RequestConfig, RequestProfile};
+
 use std::fmt::Write as _;
 use std::io::stdout;
 use std::io::Write as _;
@@ -15,12 +16,12 @@ use std::io::Write as _;
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     let args = Args::parse();
-    match args.action {
-        Action::Run(args) => run(args).await?,
-        Action::Parse => parse().await?,
+    let result = match args.action {
+        Action::Run(args) => run(args).await,
+        Action::Parse => parse().await,
         _ => panic!("error"),
-    }
-    Ok(())
+    };
+    handle_run_err(result)
 }
 
 async fn parse() -> Result<()> {

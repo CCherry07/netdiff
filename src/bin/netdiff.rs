@@ -5,20 +5,23 @@ use clap::Parser;
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::Input;
 use dialoguer::MultiSelect;
+
 use netdiff::cli::{Action, Args, RunArgs};
-use netdiff::highlight_text;
+use netdiff::{handle_run_err, highlight_text};
 use netdiff::{DiffConfig, DiffProfile, ExtraArgs, LoadConfig, RequestProfile, ResponseProfile};
+
 use std::io::stdout;
 use std::io::Write;
+
 #[tokio::main]
-async fn main() -> Result<(), anyhow::Error> {
+async fn main() -> Result<()> {
     let args = Args::parse();
-    match args.action {
-        Action::Run(args) => run(args).await?,
-        Action::Parse => parse().await?,
+    let result = match args.action {
+        Action::Run(args) => run(args).await,
+        Action::Parse => parse().await,
         _ => panic!("error"),
-    }
-    Ok(())
+    };
+    handle_run_err(result)
 }
 
 async fn parse() -> Result<()> {
